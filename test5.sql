@@ -16,7 +16,7 @@ cast(CASE WHEN AR.EMPLOYEE_ID = 0 AND AR.AUTH_EMPLOYEE_ID = 999999 THEN 9999
                                                       ELSE AR.EMPLOYEE_ID
            END AS int) AS EMPLOYEE_ID,
 cast(CASE WHEN AR.EMPLOYEE_ID = 0 AND AR.AUTH_EMPLOYEE_ID = 999999 THEN 36 ELSE AR.BRANCH_NUMBER END AS int) AS BRANCH_NUMBER,
-cast(CASE WHEN AR.EMPLOYEE_ID = 0 AND AR.AUTH_EMPLOYEE_ID = 999999 THEN '36' ELSE AR.EMPLOYEE_SECTION END AS varchar)  AS EMPLOYEE_SECTION,
+cast(CASE WHEN AR.EMPLOYEE_ID = 0 AND AR.AUTH_EMPLOYEE_ID = 999999 THEN '36' ELSE AR.EMPLOYEE_SECTION END AS string)  AS EMPLOYEE_SECTION,
 AR.MEMBERSHIP_EFF_DATE,
 AR.ROLE_CODE,
 AR.CUSTOMER_ID,
@@ -25,20 +25,20 @@ AR.AUTH_SOURCE,
 AR.AUTH_EMPLOYEE_ID,
 AR.REGION_NUMBER,
 (CASE WHEN AR.AUTH_SOURCE = 'GF' THEN 'T'
-             WHEN AR.AUTH_DATE IS NOT NULL AND date_diff('day', cast(AR.TRANSACTION_TIME as date),AR.AUTH_DATE) < 31 THEN 'T'
-             WHEN AR.AUTH_DATE IS NOT NULL AND date_diff('day', cast(AR.TRANSACTION_TIME as date),AR.AUTH_DATE) > 30 THEN 'N'
+             WHEN AR.AUTH_DATE IS NOT NULL AND datediff(AR.AUTH_DATE, cast(AR.TRANSACTION_TIME as date)) < 31 THEN 'T'
+             WHEN AR.AUTH_DATE IS NOT NULL AND datediff(AR.AUTH_DATE, cast(AR.TRANSACTION_TIME as date)) > 30 THEN 'N'
              ELSE 'F'
 END) AS AUTH_FLAG,          
 (CASE WHEN AR.AUTH_SOURCE = 'GF' THEN 'T'
-            WHEN AR.AUTH_DATE IS NOT NULL AND date_diff('day', cast(AR.TRANSACTION_TIME as date),AR.AUTH_DATE) < 61 THEN 'T'
+            WHEN AR.AUTH_DATE IS NOT NULL AND datediff(AR.AUTH_DATE, cast(AR.TRANSACTION_TIME as date)) < 61 THEN 'T'
             ELSE 'F'
 END) AS AUTH_SIXTY_FLAG,                      
 (CASE WHEN AR.TRANSACTION_TYPE = 'NEW' THEN 'T' ELSE 'F' END) AS NEW_MBR_FLAG,   
 (CASE WHEN TRIM(AR.TRANSACTION_TYPE) = 'NEW' AND  TRIM(AR.BILL_PLAN_C_NEW) IN ('AC', 'AH','MP')  THEN 0   
-            WHEN TRIM(AR.TRANSACTION_TYPE) <> 'NEW' AND  TRIM(AR.BILL_PLAN_C_NEW) IN ('AC', 'AH') AND date_diff('day', AR.MEMBERSHIP_EFF_DATE, cast(AR.TRANSACTION_TIME as date) ) <= 0 THEN 0
-            WHEN TRIM(AR.TRANSACTION_TYPE) <> 'NEW' AND  TRIM(AR.BILL_PLAN_C_NEW) IN ('AC', 'AH') AND date_diff('day', AR.MEMBERSHIP_EFF_DATE, cast(AR.TRANSACTION_TIME as date) ) > 0 AND cast(AR.TRANSACTION_TIME AS DATE) <= date_add('month',12,AR.MEMBERSHIP_EFF_DATE) THEN 1
-            WHEN TRIM(AR.TRANSACTION_TYPE) <> 'NEW' AND  TRIM(AR.BILL_PLAN_C_NEW) IN ('AC', 'AH') AND date_diff('day', AR.MEMBERSHIP_EFF_DATE, cast(AR.TRANSACTION_TIME as date) ) > 0 AND cast(AR.TRANSACTION_TIME AS DATE) > date_add('month',12,AR.MEMBERSHIP_EFF_DATE) AND cast(AR.TRANSACTION_TIME AS DATE) <= date_add('month',24,AR.MEMBERSHIP_EFF_DATE) THEN 2
-            WHEN TRIM(AR.TRANSACTION_TYPE) <> 'NEW' AND  TRIM(AR.BILL_PLAN_C_NEW) IN ('AC', 'AH') AND date_diff('day', AR.MEMBERSHIP_EFF_DATE, cast(AR.TRANSACTION_TIME as date) ) > 0 AND cast(AR.TRANSACTION_TIME AS DATE) > date_add('month',24,AR.MEMBERSHIP_EFF_DATE) THEN 3
+            WHEN TRIM(AR.TRANSACTION_TYPE) <> 'NEW' AND  TRIM(AR.BILL_PLAN_C_NEW) IN ('AC', 'AH') AND datediff(cast(AR.TRANSACTION_TIME as date), AR.MEMBERSHIP_EFF_DATE) <= 0 THEN 0
+            WHEN TRIM(AR.TRANSACTION_TYPE) <> 'NEW' AND  TRIM(AR.BILL_PLAN_C_NEW) IN ('AC', 'AH') AND datediff(cast(AR.TRANSACTION_TIME as date), AR.MEMBERSHIP_EFF_DATE) > 0 AND cast(AR.TRANSACTION_TIME AS DATE) <= add_months(AR.MEMBERSHIP_EFF_DATE,12) THEN 1
+            WHEN TRIM(AR.TRANSACTION_TYPE) <> 'NEW' AND  TRIM(AR.BILL_PLAN_C_NEW) IN ('AC', 'AH') AND datediff(cast(AR.TRANSACTION_TIME as date), AR.MEMBERSHIP_EFF_DATE) > 0 AND cast(AR.TRANSACTION_TIME AS DATE) > add_months(AR.MEMBERSHIP_EFF_DATE,12) AND cast(AR.TRANSACTION_TIME AS DATE) <= add_months(AR.MEMBERSHIP_EFF_DATE,24) THEN 2
+            WHEN TRIM(AR.TRANSACTION_TYPE) <> 'NEW' AND  TRIM(AR.BILL_PLAN_C_NEW) IN ('AC', 'AH') AND datediff(cast(AR.TRANSACTION_TIME as date), AR.MEMBERSHIP_EFF_DATE) > 0 AND cast(AR.TRANSACTION_TIME AS DATE) > add_months(AR.MEMBERSHIP_EFF_DATE,24) THEN 3
             ELSE NULL          
 END) AS TENURE_N,
 ar.member_name,
@@ -70,14 +70,7 @@ SELECT
     TMH_QTR_ABBR_X AS TimeQuarterAbbr
 FROM ace_common.DW_TIME_MONTH_HIST
 WHERE TMH_C <> 210012
-  AND TMH_EFF_D > date_add(
-    'day',
-    -1,
-    date_add(
-        'year',
-        -5,
-        date_trunc('year', current_date)
-    ))
+  AND TMH_EFF_D > date_add(date_add(date_trunc('year', current_date()), -365*5), -1)
 ),
 /* ---------------- FIRST BLOCK (PAYMENT BASED) ---------------- */
 PAYMENT_BASED AS (
@@ -87,7 +80,7 @@ PAYMENT_BASED AS (
         a.AUTH_DATE,
         a.transaction_date,
         a.payment_date,
-        CAST(a.employee_id AS VARCHAR(30)) AS EMPLOYEENUMBER,
+        CAST(a.employee_id AS string) AS EMPLOYEENUMBER,
         a.MEMBER_NUM, 
         a.CLUB_CODE,
         a.ROLE_CODE,
@@ -119,7 +112,7 @@ PAYMENT_BASED AS (
             FROM mbr_auto_renewal
             INNER JOIN TIME_MONTH t
               ON CAST(payment_time AS DATE) BETWEEN t.TimeEffDate AND t.TimeExpDate
-            WHERE CAST(TRANSACTION_TIME AS DATE) >= date_add('day', -60, t.TimeEffDate)
+            WHERE CAST(TRANSACTION_TIME AS DATE) >= date_add(t.TimeEffDate, -60)
               AND CAST(TRANSACTION_TIME AS DATE) <= t.TimeExpDate
             GROUP BY 2,3,4,5,6
         ) b
@@ -131,7 +124,7 @@ PAYMENT_BASED AS (
           AND a.AUTH_FLAG = 'T'
         GROUP BY 1,2,3,4,5,6,7,8,9
     ) a
-    WHERE EXTRACT(YEAR FROM current_date) - EXTRACT(YEAR FROM CAST(a.AUTH_DATE AS DATE)) <= 1
+    WHERE year(current_date()) - year(CAST(a.AUTH_DATE AS DATE)) <= 1
     GROUP BY 1,2,3,4,5,6,7,8,9
 ),
 
@@ -143,7 +136,7 @@ AUTH_BASED AS (
         a.AUTH_DATE,
         a.transaction_date,
         a.payment_date,
-        CAST(a.employee_id AS VARCHAR(30)) AS EMPLOYEENUMBER,
+        CAST(a.employee_id AS string) AS EMPLOYEENUMBER,
         a.MEMBER_NUM, 
         a.CLUB_CODE,
         a.ROLE_CODE,
@@ -174,7 +167,7 @@ AUTH_BASED AS (
             FROM mbr_auto_renewal
             INNER JOIN TIME_MONTH t
               ON AUTH_DATE BETWEEN t.TimeEffDate AND t.TimeExpDate
-            WHERE CAST(TRANSACTION_TIME AS DATE) >= date_add('day', -60, t.TimeEffDate)
+            WHERE CAST(TRANSACTION_TIME AS DATE) >= date_add(t.TimeEffDate, -60)
               AND CAST(TRANSACTION_TIME AS DATE) <= t.TimeExpDate
             GROUP BY 2,3,4,5,6
         ) b
@@ -187,14 +180,14 @@ AUTH_BASED AS (
         GROUP BY 1,2,3,4,5,6,7,8,9
     ) a
     WHERE a.payment_date < a.TimeEffDate
-      AND EXTRACT(YEAR FROM current_date) - EXTRACT(YEAR FROM CAST(a.AUTH_DATE AS DATE)) <= 1
+      AND year(current_date()) - year(CAST(a.AUTH_DATE AS DATE)) <= 1
     GROUP BY 1,2,3,4,5,6,7,8,9
 )
 /* ---------------- FINAL UNION ---------------- */
 Select 
 11 as metric_id
 ,TIMEEXPDATE
-,try_cast(EMPLOYEENUMBER AS INT) as EMPLOYEENUMBER
+,cast(EMPLOYEENUMBER AS INT) as EMPLOYEENUMBER
 ,NULL as branch_n_orig
 ,'' as c1
 ,'' as c2
@@ -204,12 +197,12 @@ Select
 ,NULL as fact4
 ,NULL as fact5
 ,NULL as fact6
-,'ClubNo:'||Club_Code as Club_Code
-,'TransactionDate :'||cast(Transaction_Date as varchar) as Transaction_Date
-,'Rolecode :'||Role_Code as Role_Code
-,'MemberNo :'||cast(Member_Num as varchar) as Member_Num
-,'AuthDate :'||cast(Auth_Date as varchar) as Auth_Date
-,'PaymentDate :'||cast(Payment_Date as varchar) as Payment_Date from (
+,concat('ClubNo:',Club_Code) as Club_Code
+,concat('TransactionDate :',cast(Transaction_Date as string)) as Transaction_Date
+,concat('Rolecode :',Role_Code) as Role_Code
+,concat('MemberNo :',cast(Member_Num as string)) as Member_Num
+,concat('AuthDate :',cast(Auth_Date as string)) as Auth_Date
+,concat('PaymentDate :',cast(Payment_Date as string)) as Payment_Date from (
 SELECT * FROM PAYMENT_BASED
 UNION
 SELECT * FROM AUTH_BASED);

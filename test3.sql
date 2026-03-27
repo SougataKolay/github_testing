@@ -18,7 +18,23 @@ select
 ,'' as c11
 ,'' as c12
 from (
-select * from member_services_mart.mbr_auto_renewal_fsu_history
-union
-select cast(timeexpdate as Date) as timeexpdate, cast(yearnum as int) yearnum,cast(monthnum as int) as monthnum,cast(empnum as int) as empnum,cast(newautopay as int) as newautopay from mbr_auto_renewal_curr_mth_snapshot
-) WHERE YEAR(current_date) - YearNum <=1
+    SELECT 
+        timeexpdate,
+        yearnum,
+        monthnum,
+        empnum,
+        newautopay
+    FROM member_services_mart.mbr_auto_renewal_fsu_history
+
+    UNION ALL
+
+    SELECT 
+        CAST(timeexpdate AS DATE),
+        CAST(yearnum AS INT),
+        CAST(monthnum AS INT),
+        CAST(empnum AS INT),
+        CAST(newautopay AS INT)
+    FROM mbr_auto_renewal_curr_mth_snapshot
+) t
+
+WHERE TimeExpDate >= add_months(current_date, -12)

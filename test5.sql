@@ -25,12 +25,12 @@ AR.AUTH_SOURCE,
 AR.AUTH_EMPLOYEE_ID,
 AR.REGION_NUMBER,
 (CASE WHEN AR.AUTH_SOURCE = 'GF' THEN 'T'
-             WHEN AR.AUTH_DATE IS NOT NULL AND datediff(AR.AUTH_DATE, cast(AR.TRANSACTION_TIME as date)) < 31 THEN 'T'
-             WHEN AR.AUTH_DATE IS NOT NULL AND datediff(AR.AUTH_DATE, cast(AR.TRANSACTION_TIME as date)) > 30 THEN 'N'
+             WHEN AR.AUTH_DATE IS NOT NULL AND datediff(cast(AR.AUTH_DATE as date), cast(AR.TRANSACTION_TIME as date)) < 31 THEN 'T'
+             WHEN AR.AUTH_DATE IS NOT NULL AND datediff(cast(AR.AUTH_DATE as date), cast(AR.TRANSACTION_TIME as date)) > 30 THEN 'N'
              ELSE 'F'
 END) AS AUTH_FLAG,          
 (CASE WHEN AR.AUTH_SOURCE = 'GF' THEN 'T'
-            WHEN AR.AUTH_DATE IS NOT NULL AND datediff(AR.AUTH_DATE, cast(AR.TRANSACTION_TIME as date)) < 61 THEN 'T'
+            WHEN AR.AUTH_DATE IS NOT NULL AND datediff(cast(AR.AUTH_DATE as date), cast(AR.TRANSACTION_TIME as date)) < 61 THEN 'T'
             ELSE 'F'
 END) AS AUTH_SIXTY_FLAG,                      
 (CASE WHEN AR.TRANSACTION_TYPE = 'NEW' THEN 'T' ELSE 'F' END) AS NEW_MBR_FLAG,   
@@ -52,7 +52,7 @@ AR.EXTRACT_T,
             WHEN AR.AUTH_DATE > cast(AR.PAYMENT_T AS DATE) THEN AR.AUTH_DATE
                                            WHEN AR.AUTH_DATE < cast(AR.PAYMENT_T AS DATE) THEN cast(AR.PAYMENT_T AS DATE)
                                            ELSE AR.AUTH_DATE END) AS REPORTING_DATE
-FROM member_services_mart.membership_auto_renewal AR),
+FROM glue_catalog.member_services_mart.membership_auto_renewal AR),
 TIME_MONTH as (
 SELECT
     TMH_C AS TimeCode,
@@ -68,7 +68,7 @@ SELECT
     TMH_QTR_N AS TimeQuarterNumber,
     TMH_MONTH_ABBR_X AS TimeMonthAbbr,
     TMH_QTR_ABBR_X AS TimeQuarterAbbr
-FROM ace_common.DW_TIME_MONTH_HIST
+FROM glue_catalog.ace_common.DW_TIME_MONTH_HIST
 WHERE TMH_C <> 210012
   AND TMH_EFF_D > date_add(date_add(date_trunc('year', current_date()), -365*5), -1)
 ),
